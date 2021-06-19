@@ -1,4 +1,5 @@
 require("dotenv/config")
+const { query } = require("express")
 const {getConnection} = require("../../services/mongodb/connection")
 const dbUser = process.env.DATABASE_USER
 const dbPassword = process.env.DATABASE_PASSWORD
@@ -18,13 +19,13 @@ const listAll = async (database, collection) => {
         client = await getConnection(uri)
         const cursor = await client.db(database).collection(collection);
         result = await cursor.find({}).toArray()
-        
+
     } catch (error) {
         console.log(`Error: ${error}`)
         result = error
-         
+
     } finally {
-        
+
         client ? client.close() : null
         return result
     }
@@ -44,13 +45,13 @@ const updateOne = async (database, collection, query, data) => {
         console.log(`Error: ${error.message}`)
        result = {
            message: "Update failed",
-           error: error.message 
+           error: error.message
         }
     } finally {
         client ? client.close() : null
         return result
     }
-} 
+}
 
 // Deletes a Document filtered by a Query Argument
 const deleteOne = async (database, collection, query) => {
@@ -99,7 +100,7 @@ const findDocuments = async (database, collection, query) => {
     try {
         client = await getConnection(uri)
         cursor = await client.db(database).collection(collection);
-        result = await cursor.find(query)
+        result = await cursor.find(query).toArray()
     } catch (error) {
         console.log(`Error: ${error.message}`)
         result = {message: "Operation failed",
@@ -109,12 +110,65 @@ const findDocuments = async (database, collection, query) => {
         return result
     }
 }
+const insertOne = async (database, collection, data) => {
+    let client;
+    let result;
+
+    try{
+        client = await getConnection(uri)
+        cursor = await client.db(database).collection(collection);
+        await cursor.insertOne(data)
+        result = {message: "Document inserted"}
+    }catch{
+        console.log(`Error: ${error.message}`)
+        result = {message: "Operation failed",
+    error: error.message }
+    }finally{
+        client ? client.close() : null
+        return result
+    }
+}
+
+const findRandom = async (database, collection, difficulty, quantity, category) => {
+
+    let client;
+    let result;
+    try {
+
+        client = await getConnection(uri)
+        cursor = await client.db(database).collection(collection);
+
+        if( category == '')
+            delete query.category
+
+      result = await cursor.aggregate(
+        [
+          {$match: { "difficulty": difficulty, "category": { $in: category }}},
+          {$sample: {size:parseInt(quantity,10)}}
+        ]
+      ).toArray()
+
+      console.log(result)
+    } catch (error) {
+        console.log(`Error: ${error.message}`)
+        result = {message: "Operation failed",
+    error: error.message }
+    } finally {
+        client ? client.close() : null
+        return result
+    }
+
+
+
+}
 
 
 module.exports = {
-    listAll, 
+    listAll,
     updateOne,
     deleteOne,
     findOne,
-    findDocuments
+    findDocuments,
+    insertOne,
+    findRandom
 }
